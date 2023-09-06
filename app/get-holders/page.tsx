@@ -5,8 +5,8 @@ import { type Chain, allChains } from "@thirdweb-dev/chains";
 import { ThirdwebProvider, useSDK } from "@thirdweb-dev/react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Dispatch, SetStateAction, useRef, useState } from "react";
-import { _checkIsContractAddress } from "../validate-address/page";
 import Link from "next/link";
+import { _checkIsContractAddress } from "@/utils/checkIsContractAddress";
 
 export default function Page() {
   const searchParams = useSearchParams();

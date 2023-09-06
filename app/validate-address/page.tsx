@@ -1,8 +1,8 @@
 "use client";
 
 import { TW_PUBLIC_CLIENT_ID } from "@/const";
-import { ThirdwebProvider, ThirdwebSDK, useSDK } from "@thirdweb-dev/react";
-import { isAddress } from "ethers/lib/utils";
+import { _checkIsContractAddress } from "@/utils/checkIsContractAddress";
+import { ThirdwebProvider, useSDK } from "@thirdweb-dev/react";
 import { useRef } from "react";
 
 export default function Page() {
@@ -16,8 +16,9 @@ export default function Page() {
 const Content = () => {
   const ref = useRef<HTMLInputElement>(null);
   const sdk = useSDK();
-  if (!sdk) return;
+
   const check = async () => {
+    if (!sdk) return;
     const address = ref.current?.value;
     if (!address) return alert("Please enter an Ethereum address");
     const res = _checkIsContractAddress(address, sdk);
@@ -42,25 +43,3 @@ const Content = () => {
     </>
   );
 };
-
-export async function _checkIsContractAddress(
-  address: string,
-  sdk: ThirdwebSDK
-): Promise<{ passed: boolean; message: string }> {
-  const isValid = isAddress(address);
-  if (!isValid)
-    return {
-      passed: false,
-      message: "This is NOT a valid EVM wallet/contract address",
-    };
-  const byteCode = await sdk?.getProvider().getCode(address);
-  if (byteCode === "0x")
-    return {
-      passed: false,
-      message: "This is a valid user wallet address & NOT a contract address",
-    };
-  return {
-    passed: true,
-    message: "This is a contract address & NOT a user wallet address",
-  };
-}
