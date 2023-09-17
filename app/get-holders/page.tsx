@@ -1,6 +1,6 @@
 "use client";
 
-import { TW_PUBLIC_CLIENT_ID } from "@/const";
+import { NEXT_PUBLIC_TW_PUBLIC_CLIENT_ID } from "@/const";
 import { type Chain, allChains } from "@thirdweb-dev/chains";
 import { ThirdwebProvider, useSDK } from "@thirdweb-dev/react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -12,7 +12,7 @@ export default function Page() {
   const searchParams = useSearchParams();
   const chainSlug = searchParams.get("chainSlug") ?? undefined;
   return (
-    <ThirdwebProvider clientId={TW_PUBLIC_CLIENT_ID} activeChain={chainSlug}>
+    <ThirdwebProvider clientId={NEXT_PUBLIC_TW_PUBLIC_CLIENT_ID} activeChain={chainSlug}>
       <Content />
     </ThirdwebProvider>
   );

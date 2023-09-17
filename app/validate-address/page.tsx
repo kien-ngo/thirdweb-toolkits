@@ -1,13 +1,13 @@
 "use client";
 
-import { TW_PUBLIC_CLIENT_ID } from "@/const";
+import { NEXT_PUBLIC_TW_PUBLIC_CLIENT_ID } from "@/const";
 import { _checkIsContractAddress } from "@/utils/checkIsContractAddress";
 import { ThirdwebProvider, useSDK } from "@thirdweb-dev/react";
 import { useRef } from "react";
 
 export default function Page() {
   return (
-    <ThirdwebProvider clientId={TW_PUBLIC_CLIENT_ID}>
+    <ThirdwebProvider clientId={NEXT_PUBLIC_TW_PUBLIC_CLIENT_ID}>
       <Content />
     </ThirdwebProvider>
   );
