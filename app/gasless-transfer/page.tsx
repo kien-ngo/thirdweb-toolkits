@@ -137,9 +137,9 @@ const Content = ({
           {chainSearch === activeChain?.slug ? "Applied" : "Apply"}
         </button>
         <datalist id="network-list">
-          {allChains.map((item) => (
-            <option key={item.chainId} value={item.slug}>
-              {item.name}
+          {transferContractAddresses.map((item) => (
+            <option key={item.slug} value={item.slug}>
+              {item.slug}
             </option>
           ))}
         </datalist>
@@ -153,7 +153,16 @@ const Content = ({
         />
       ) : (
         <div className="mx-auto flex flex-col w-[92vw] lg:w-[500px] gap-4 border border-gray-400 p-2">
-          Sorry, this chain is not supported
+          {activeChain ? (
+            "Sorry, this chain is not supported"
+          ) : (
+            <>
+              <div>Please select a supported network from the list below</div>
+              {transferContractAddresses.map((item) => (
+                <div key={item.slug}>- {item.slug}</div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </>
@@ -338,13 +347,12 @@ const Erc721Container = ({
         return alert("Number of token to send exceeded " + qtyToSend);
       _arr.push(_id);
     }
-    setSelectedTokenIds(_arr);
+    setSelectedTokenIds([..._arr]);
   };
 
-  useEffect(() => {
-    if (transferMode === "Transfer ALL") setSelectedTokenIds([]);
-  }, [transferMode]);
-
+  const tokenSelected = (_id: number) => {
+    return selectedTokenIds.includes(_id);
+  };
   return (
     <>
       {nfts && nfts.length ? (
@@ -413,27 +421,27 @@ const Erc721Container = ({
           ) : (
             <>
               <div className="flex flex-row flex-wrap gap-2 justify-center">
-                {nfts.map((item) => (
-                  <div
-                    key={item.metadata.id}
-                    onClick={() =>
-                      toggleSelectedTokenIds(Number(item.metadata.id))
-                    }
-                    className={`p-1 w-[100px] cursor-pointer border-2 border-transparent hover:border-orange-500 flex flex-col gap-1 ${
-                      selectedTokenIds.includes(Number(item.metadata.id))
-                        ? "border-orange-500"
-                        : ""
-                    }`}
-                  >
-                    <ThirdwebNftMedia
-                      metadata={item.metadata}
-                      width="90"
-                      height="90"
-                      requireInteraction={true}
-                    />
-                    <div>ID: {item.metadata.id}</div>
-                  </div>
-                ))}
+                {nfts.map((item) => {
+                  const _id = Number(item.metadata.id);
+                  return (
+                    <div
+                      key={_id}
+                      onClick={() => toggleSelectedTokenIds(_id)}
+                      style={{
+                        borderColor: tokenSelected(_id) ? "orange" : "",
+                      }}
+                      className="p-1 w-[100px] cursor-pointer border-2 border-transparent hover:border-orange-500 flex flex-col gap-1"
+                    >
+                      <ThirdwebNftMedia
+                        metadata={item.metadata}
+                        width="90"
+                        height="90"
+                        requireInteraction={true}
+                      />
+                      <div>ID: {_id}</div>
+                    </div>
+                  );
+                })}
               </div>
               {selectedTokenIds.length > 0 ? (
                 <button
