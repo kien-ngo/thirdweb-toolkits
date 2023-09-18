@@ -12,8 +12,9 @@ import {
   useContract,
   useOwnedNFTs,
   useSDK,
+  useTokenBalance,
 } from "@thirdweb-dev/react";
-import { BaseContract } from "ethers";
+import { BaseContract, utils } from "ethers";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 
 type TActiveChain = (typeof allChains)[number] | undefined;
@@ -214,9 +215,9 @@ const ComponentForSupportedChain = ({
         </span>
         <span className="text-sm">
           Make sure the Autotask URL belong to the network that you are
-          targeting. Also make sure it has enough funds to cover the gas fees.
-          <br />
-          Click{" "}
+          targeting. This is mandatory if you want to use the Gasless feature,
+          otherwise optional. Also make sure the relayer has enough funds to
+          cover the gas fees. Click{" "}
           <a
             className="underline"
             href="https://blog.thirdweb.com/guides/setup-gasless-transactions/"
@@ -263,7 +264,13 @@ const ComponentForSupportedChain = ({
                 />
               )}
               {isERC1155 && <Erc1155Container />}
-              {isERC20 && <Erc20Container />}
+              {isERC20 && (
+                <Erc20Container
+                  address={address}
+                  tokenContract={loadedContract}
+                  transferContract={transferContract}
+                />
+              )}
             </div>
           ) : (
             <div className="mx-auto flex flex-col w-[92vw] lg:w-[500px] gap-4 border border-gray-400 p-2">
@@ -278,16 +285,18 @@ const ComponentForSupportedChain = ({
 
 const Separator = () => {
   return (
-    <svg
-      viewBox="0 0 50 50"
-      enableBackground="new 0 0 50 50"
-      className="mx-auto h-[25px] w-auto"
-    >
-      <path
-        d="m33.707 39.707-1.414-1.414L26 44.586V1h-2v43.586l-6.293-6.293-1.414 1.414L25 48.414z"
-        fill="#ffffff"
-      ></path>
-    </svg>
+    <div className="flex">
+      <svg
+        viewBox="0 0 50 50"
+        enableBackground="new 0 0 50 50"
+        className="mx-auto h-[25px] w-auto"
+      >
+        <path
+          d="m33.707 39.707-1.414-1.414L26 44.586V1h-2v43.586l-6.293-6.293-1.414 1.414L25 48.414z"
+          fill="#ffffff"
+        ></path>
+      </svg>
+    </div>
   );
 };
 
@@ -382,7 +391,10 @@ const Erc721Container = ({
             {nftTransferModes.map((item) => (
               <button
                 key={item}
-                onClick={() => setTransferMode(item)}
+                onClick={() => {
+                  setTransferMode(item);
+                  setSelectedTokenIds([]);
+                }}
                 className={`border px-4 py-1 ${
                   item === transferMode ? "text-black bg-white font-bold" : ""
                 }`}
@@ -465,10 +477,117 @@ const Erc721Container = ({
   );
 };
 
-const Erc1155Container = () => {
-  return <>This contract is ERC1155</>;
+const Erc20Container = ({
+  address,
+  tokenContract,
+  transferContract,
+}: {
+  address: string;
+  tokenContract: SmartContract<BaseContract>;
+  transferContract: SmartContract<BaseContract>;
+}) => {
+  const tokenContractAddress = tokenContract.getAddress();
+  const transferContractAddress = transferContract.getAddress();
+  const { data: availableBalance, isLoading } = useTokenBalance(
+    tokenContract,
+    address
+  );
+  const [qtyToSend, setQtyToSend] = useState<string>("0");
+  const recipientRef = useRef<HTMLInputElement>(null);
+  const qtyToSendRef = useRef<HTMLInputElement>(null);
+  if (isLoading) return <div>Loading data ...</div>;
+
+  const _transferTokens = async () => {
+    if (!availableBalance) return alert("missing availableBalance");
+    const _recipient = recipientRef.current?.value;
+    if (!_recipient) return alert("Please enter recipient");
+    const _amount = qtyToSendRef.current?.value;
+    if (!_amount || _amount === "0")
+      return alert("Please enter an amount to send");
+    // const res = _checkIsContractAddress(recipient, sdk);
+    const _amountToSend = Number(_amount);
+    try {
+      const allowance = await tokenContract.erc20.allowanceOf(
+        address,
+        transferContractAddress
+      );
+      console.log({ allowance });
+      if (Number(allowance.displayValue) < _amountToSend) {
+        await tokenContract.erc20.setAllowance(
+          transferContractAddress,
+          _amountToSend
+        );
+      } else {
+        console.log("allowance suffices");
+      }
+      const tx = await transferContract.call("transferFromERC20", [
+        tokenContractAddress,
+        address,
+        _recipient,
+        utils.parseUnits(_amountToSend.toString(), availableBalance.decimals),
+      ]);
+      console.log(tx);
+    } catch (err) {
+      const reason = (err as any).reason;
+      console.log(reason);
+      alert(reason);
+    }
+  };
+  return (
+    <>
+      <div className="text-center">
+        <span className="font-bold">
+          ERC20 contract found! You own {availableBalance?.displayValue} tokens.
+        </span>
+      </div>
+
+      <div className="flex flex-col">
+        <span>Enter recipient address</span>
+        <input
+          type="text"
+          placeholder="0x..."
+          className="px-4 py-2 text-black"
+          ref={recipientRef}
+        />
+      </div>
+
+      <div className="flex flex-col">
+        <div className="flex flex-row justify-between px-2">
+          <span>Amount to send</span>
+          <button
+            className="font-bold"
+            onClick={() => {
+              if (!availableBalance) return alert("missing availableBalance");
+              setQtyToSend(availableBalance?.value.toString());
+              const input = document.getElementById(
+                "__qtyToSend"
+              ) as HTMLInputElement;
+              if (input) input.value = availableBalance.displayValue;
+            }}
+          >
+            Max
+          </button>
+        </div>
+        <input
+          id="__qtyToSend"
+          type="text"
+          placeholder="100"
+          className="px-4 py-2 text-black"
+          ref={qtyToSendRef}
+          defaultValue={qtyToSend}
+        />
+      </div>
+
+      <button
+        onClick={_transferTokens}
+        className="border-2 border-green-500 w-[150px] mx-auto mt-3 rounded-full py-2 hover:bg-green-500 hover:text-black hover:font-bold"
+      >
+        Transfer
+      </button>
+    </>
+  );
 };
 
-const Erc20Container = () => {
-  return <>This contract is ERC20</>;
+const Erc1155Container = () => {
+  return <>This contract is ERC1155. This feature is in the work</>;
 };
