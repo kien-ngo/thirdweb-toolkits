@@ -263,7 +263,13 @@ const ComponentForSupportedChain = ({
                   transferContract={transferContract}
                 />
               )}
-              {isERC1155 && <Erc1155Container />}
+              {isERC1155 && (
+                <Erc1155Container
+                  address={address}
+                  nftContract={loadedContract}
+                  transferContract={transferContract}
+                />
+              )}
               {isERC20 && (
                 <Erc20Container
                   address={address}
@@ -588,6 +594,178 @@ const Erc20Container = ({
   );
 };
 
-const Erc1155Container = () => {
-  return <>This contract is ERC1155. This feature is in the work</>;
+const Erc1155Container = ({
+  address,
+  nftContract,
+  transferContract,
+}: {
+  address: string;
+  nftContract: SmartContract<BaseContract>;
+  transferContract: SmartContract<BaseContract>;
+}) => {
+  const { data: nfts, isLoading } = useOwnedNFTs(nftContract, address);
+  const [transferMode, setTransferMode] =
+    useState<(typeof nftTransferModes)[number]>("Transfer ALL");
+  const [qtyToSend, setQtyToSend] = useState<number>(50);
+  const recipientRef = useRef<HTMLInputElement>(null);
+
+  const [selectedTokenIds, setSelectedTokenIds] = useState<number[]>([]);
+  if (isLoading) return <div>Loading NFTs ...</div>;
+  const transferContractAddress = transferContract.getAddress();
+  const _transferERC721 = async (_tokenIds: number[]) => {
+    const _recipient = recipientRef.current?.value;
+    if (!_recipient) return alert("Please enter recipient");
+
+    try {
+      // const isApproved = await nftContract.erc721.isApproved(
+      //   address,
+      //   transferContract.getAddress()
+      // );
+      // if (!isApproved) {
+      //   await nftContract.erc1155.setApprovalForAll(
+      //     transferContractAddress,
+      //     true
+      //   );
+      // } else console.log("contract is approved to send nfts");
+      // const tx = await transferContract.call("transferERC721", [
+      //   nftContract.getAddress(),
+      //   address,
+      //   _recipient,
+      //   _tokenIds,
+      // ]);
+      // console.log(tx);
+    } catch (err) {
+      const reason = (err as any).reason;
+      console.log(reason);
+      alert(reason);
+    }
+  };
+  const toggleSelectedTokenIds = (_id: number) => {
+    let _arr = selectedTokenIds;
+    if (_arr.includes(_id)) _arr = _arr.filter((o) => o !== _id);
+    else {
+      if (_arr.length === qtyToSend)
+        return alert("Number of token to send exceeded " + qtyToSend);
+      _arr.push(_id);
+    }
+    setSelectedTokenIds([..._arr]);
+  };
+
+  const tokenSelected = (_id: number) => {
+    return selectedTokenIds.includes(_id);
+  };
+  return (
+    <>
+      {nfts && nfts.length ? (
+        <>
+          <div className="text-center">
+            <span className="font-bold">
+              ERC721 contract found! You own {nfts.length} items in this
+              collection
+            </span>
+            <div className="text-xs text-center">
+              Keep in mind that due to block space limit of the selected chain,
+              the amount of NFT you can send in one transaction may vary. Tweak
+              the number below to set the quantity you wanna transfer in 1 go
+            </div>
+          </div>
+          <div className="flex flex-row justify-center gap-3">
+            Max quantity to send:{" "}
+            <input
+              type="number"
+              min={0}
+              className="max-w-[70px] text-black px-2"
+              defaultValue={qtyToSend}
+              onChange={(e) => setQtyToSend(Number(e.target.value))}
+            />
+          </div>
+          <div className="flex flex-row justify-center gap-3">
+            {nftTransferModes.map((item) => (
+              <button
+                key={item}
+                onClick={() => {
+                  setTransferMode(item);
+                  setSelectedTokenIds([]);
+                }}
+                className={`border px-4 py-1 ${
+                  item === transferMode ? "text-black bg-white font-bold" : ""
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col">
+            <span>Enter recipient address</span>
+            <input
+              type="text"
+              placeholder="0x..."
+              className="px-4 py-2 text-black"
+              ref={recipientRef}
+            />
+          </div>
+          {transferMode === "Transfer ALL" ? (
+            <button
+              className="border-2 border-green-500 w-[150px] mx-auto mt-3 rounded-full py-2 hover:bg-green-500 hover:text-black hover:font-bold"
+              onClick={async () => {
+                const nftsToSend =
+                  nfts.length <= qtyToSend ? nfts : nfts.slice(0, qtyToSend);
+                const _tokenIds = nftsToSend.map((item) =>
+                  Number(item.metadata.id)
+                );
+                _transferERC721(_tokenIds);
+              }}
+            >
+              Transfer (
+              {nfts.length <= qtyToSend
+                ? nfts.length
+                : nfts.slice(0, qtyToSend).length}
+              )
+            </button>
+          ) : (
+            <>
+              <div className="flex flex-row flex-wrap gap-2 justify-center">
+                {nfts.map((item) => {
+                  const _id = Number(item.metadata.id);
+                  return (
+                    <div
+                      key={_id}
+                      onClick={() => toggleSelectedTokenIds(_id)}
+                      style={{
+                        borderColor: tokenSelected(_id) ? "orange" : "",
+                      }}
+                      className="p-1 w-[100px] cursor-pointer border-2 border-transparent hover:border-orange-500 flex flex-col gap-1"
+                    >
+                      <ThirdwebNftMedia
+                        metadata={item.metadata}
+                        width="90"
+                        height="90"
+                        requireInteraction={true}
+                      />
+                      <div>ID: {_id}</div>
+                      <div>Qty: {item.supply}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedTokenIds.length > 0 ? (
+                <button
+                  className="border-2 border-green-500 w-[150px] mx-auto mt-3 rounded-full py-2 hover:bg-green-500 hover:text-black hover:font-bold"
+                  onClick={async () => _transferERC721(selectedTokenIds)}
+                >
+                  Transfer ({selectedTokenIds.length})
+                </button>
+              ) : (
+                <div className="text-center">
+                  Select at least a token to transfer
+                </div>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <>You do not own any NFTs in this collection</>
+      )}
+    </>
+  );
 };
