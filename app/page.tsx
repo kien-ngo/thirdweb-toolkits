@@ -21,13 +21,13 @@ const list = [
     title: "Check for latest package versions",
     url: "/versions",
     tags: [],
-    description: ''
+    description: "",
   },
   {
     title: "Validate Ethereum address",
     url: "/validate-address",
     tags: [],
-    description: ''
+    description: "",
   },
   // {
   //   title: "Get all holders of your NFT collection",
@@ -36,9 +36,15 @@ const list = [
   //   description: ''
   // },
   {
-    title: 'Gasless Token Transfer',
-    url: '/gasless-transfer',
+    title: "Gasless Token Transfer",
+    url: "/gasless-transfer",
     tags: [],
-    description: ''
-  }
+    description: "",
+  },
+  {
+    title: "Gas Estimation",
+    url: "/gas-estimation",
+    tags: [],
+    description: "",
+  },
 ];

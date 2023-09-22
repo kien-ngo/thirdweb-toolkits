@@ -1,3 +1,4 @@
+import Navbar from "@/components/Navbar";
 import "./globals.css";
 import type { Metadata } from "next";
 
@@ -14,12 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex flex-col h-[100vh]">
-        <div className="w-full border-b p-2 flex flex-row justify-between text-2xl mb-8">
-          <a href="/">Home</a>
-          <div>
-            <a href="https://github.com/kien-ngo/thirdweb-toolkits">Github</a>
-          </div>
-        </div>
+        <Navbar />
         {children}
       </body>
     </html>
